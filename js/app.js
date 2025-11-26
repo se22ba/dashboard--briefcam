@@ -1,4 +1,4 @@
-const TZ_SHIFT_HOURS = -3;
+const TZ_SHIFT_HOURS = -2;
 
 function parseDate(str) {
   if (!str) return null;
