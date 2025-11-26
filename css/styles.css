@@ -26,8 +26,6 @@ body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-/* HEADER */
-
 header {
   padding: 16px 24px;
   display: flex;
@@ -139,8 +137,6 @@ select {
   font-size: 0.8rem;
 }
 
-/* MAIN LAYOUT */
-
 main {
   max-width: 1400px;
   margin: 0 auto;
@@ -167,8 +163,6 @@ main {
   background: rgba(15, 23, 42, 0.7);
 }
 
-/* BLOCKS */
-
 .block {
   margin-top: 12px;
 }
@@ -187,8 +181,6 @@ main {
   font-size: 0.8rem;
   color: var(--text-muted);
 }
-
-/* RANGE HEADER */
 
 .range-header {
   display: flex;
@@ -223,8 +215,6 @@ main {
   color: var(--text-main);
   font-size: 0.78rem;
 }
-
-/* CARDS & GRID */
 
 .kpi-grid {
   display: grid;
@@ -268,8 +258,6 @@ main {
   font-size: 0.72rem;
 }
 
-/* CHARTS */
-
 .charts-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -302,12 +290,9 @@ canvas {
   height: 100% !important;
 }
 
-/* Hace que ese card ocupe todo el ancho del grid (para el gráfico tipo Excel) */
 .chart-wide {
   grid-column: 1 / -1;
 }
-
-/* FOOTER */
 
 footer {
   position: fixed;
@@ -323,8 +308,6 @@ footer {
   display: flex;
   justify-content: center;
 }
-
-/* RESPONSIVE */
 
 @media (max-width: 900px) {
   .range-header {

@@ -5,13 +5,6 @@
   <title>Dashboard Casos Briefcam</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- usar librerías locales (offline) -->
-  <!--
-  <script src="libs/papaparse.min.js"></script>
-  <script src="libs/chart.umd.min.js"></script>
-  -->
-
-  <!-- usar CDN (rápido para probar) -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -51,7 +44,6 @@
       <span id="statusText">Esperando CSV...</span>
     </div>
 
-    <!-- VISTA RELATIVA -->
     <section class="block block-relative">
       <div class="block-header-simple">
         <h2 class="block-title">Vista por ventana relativa</h2>
@@ -137,7 +129,6 @@
       </section>
     </section>
 
-    <!-- VISTA POR RANGO -->
     <section class="block block-range">
       <div class="range-header">
         <div>
@@ -242,7 +233,6 @@
           </div>
         </div>
 
-        <!-- NUEVO: gráfico tipo Excel, terminados vs fallas por hora -->
         <div class="card chart-card chart-wide">
           <div class="card-header">
             <h2>Casos creados vs fallas por hora</h2>
