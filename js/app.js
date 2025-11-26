@@ -1,3 +1,5 @@
+const TZ_SHIFT_HOURS = -2;
+
 function parseDate(str) {
   if (!str) return null;
   let s = String(str).trim();
@@ -6,7 +8,7 @@ function parseDate(str) {
   const isoLike = mainPart.replace(" ", "T");
   const d = new Date(isoLike);
   if (isNaN(d.getTime())) return null;
-  return d;
+  return new Date(d.getTime() + TZ_SHIFT_HOURS * 3600000);
 }
 
 function normalizeStatus(s) {
