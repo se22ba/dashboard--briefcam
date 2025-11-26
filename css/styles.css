@@ -302,6 +302,11 @@ canvas {
   height: 100% !important;
 }
 
+/* Hace que ese card ocupe todo el ancho del grid (para el gráfico tipo Excel) */
+.chart-wide {
+  grid-column: 1 / -1;
+}
+
 /* FOOTER */
 
 footer {

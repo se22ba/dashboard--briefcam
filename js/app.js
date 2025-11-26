@@ -3,7 +3,6 @@ function parseDate(str) {
   let s = String(str).trim();
   if (!s) return null;
 
-  
   const mainPart = s.split('.')[0];
   const isoLike = mainPart.replace(' ', 'T');
   const d = new Date(isoLike);
@@ -59,6 +58,40 @@ function groupHoursByDay(rows, startField, endField) {
   return { labels, values };
 }
 
+/* NUEVO: agrupado por franjas de 30 min (0, 0.5, 1, 1.5, ... 23.5)
+   usando createdDate y statusNorm */
+function buildHourlySuccessError(rows) {
+  const BIN_COUNT = 24 * 2; // 48 bins de 30 minutos
+  const labels = [];
+  const success = new Array(BIN_COUNT).fill(0);
+  const fails = new Array(BIN_COUNT).fill(0);
+
+  for (let i = 0; i < BIN_COUNT; i++) {
+    const hour = Math.floor(i / 2);
+    const half = i % 2;
+    labels.push(half ? `${hour}.5` : `${hour}`);
+  }
+
+  for (const r of rows) {
+    const d = r.createdDate;
+    if (!d) continue;
+
+    const h = d.getHours();
+    const m = d.getMinutes();
+    let index = h * 2 + (m >= 30 ? 1 : 0);
+    if (index < 0 || index >= BIN_COUNT) continue;
+
+    const st = r.statusNorm || '';
+    if (FINISHED_STATUSES.includes(st) || st.includes('success')) {
+      success[index]++;
+    } else if (st.includes('error') || st.includes('fail')) {
+      fails[index]++;
+    }
+  }
+
+  return { labels, success, fails };
+}
+
 function computeAnchorDate(rows) {
   let maxTime = null;
   for (const r of rows) {
@@ -100,42 +133,41 @@ function formatDateTimeLocal(d) {
   );
 }
 
-
-
 let allRows = [];
 
 const FINISHED_STATUSES = ['finished', 'completed', 'done', 'success'];
 
-
+// Charts relativos
 let createdChartRel = null;
 let finishErrorChartRel = null;
 let statusChartRel = null;
 let hoursChartRel = null;
 
-
+// Charts rango
 let createdChartRange = null;
 let finishErrorChartRange = null;
 let statusChartRange = null;
 let hoursChartRange = null;
+let hourlyChartRange = null; // NUEVO
 
-
+// DOM refs
 const statusText = document.getElementById('statusText');
 
-
+// Vista relativa
 const kpiCreatedRel = document.getElementById('kpiCreatedRel');
 const kpiFinishedRel = document.getElementById('kpiFinishedRel');
 const kpiErrorRel = document.getElementById('kpiErrorRel');
 const kpiAvgTimeRel = document.getElementById('kpiAvgTimeRel');
 const kpiHoursRel = document.getElementById('kpiHoursRel');
 
-
+// Vista rango
 const kpiCreatedRange = document.getElementById('kpiCreatedRange');
 const kpiFinishedRange = document.getElementById('kpiFinishedRange');
 const kpiErrorRange = document.getElementById('kpiErrorRange');
 const kpiAvgTimeRange = document.getElementById('kpiAvgTimeRange');
 const kpiHoursRange = document.getElementById('kpiHoursRange');
 
-
+// Controles
 const timeRangeSelect = document.getElementById('timeRange');
 const fileInput = document.getElementById('fileInput');
 const loadBtn = document.getElementById('loadBtn');
@@ -145,7 +177,7 @@ const rangeToInput = document.getElementById('rangeTo');
 const rangeModeSelect = document.getElementById('rangeMode');
 const applyRangeBtn = document.getElementById('applyRangeBtn');
 
-
+// ---------------------- Carga de CSV ----------------------
 
 loadBtn.addEventListener('click', () => {
   const file = fileInput.files[0];
@@ -180,7 +212,6 @@ loadBtn.addEventListener('click', () => {
 
       statusText.textContent = `CSV cargado: ${rows.length} filas`;
 
-      
       const minDate = computeMinDate(allRows);
       const maxDate = computeAnchorDate(allRows);
       if (minDate && maxDate) {
@@ -198,7 +229,7 @@ loadBtn.addEventListener('click', () => {
   });
 });
 
-
+// Eventos de filtros
 timeRangeSelect.addEventListener('change', () => {
   if (!allRows.length) return;
   recalcRelative();
@@ -217,7 +248,7 @@ rangeModeSelect.addEventListener('change', () => {
   recalcRange();
 });
 
-
+// ---------------------- Vista relativa ----------------------
 
 function recalcRelative() {
   if (!allRows.length) return;
@@ -235,16 +266,24 @@ function recalcRelative() {
   const fromTime = anchorTime - windowMs;
 
   const filteredByCreated = allRows.filter(
-    (r) => r.createdDate && r.createdDate.getTime() >= fromTime && r.createdDate.getTime() <= anchorTime
+    (r) =>
+      r.createdDate &&
+      r.createdDate.getTime() >= fromTime &&
+      r.createdDate.getTime() <= anchorTime
   );
   const filteredByCompleted = allRows.filter(
-    (r) => r.completedDate && r.completedDate.getTime() >= fromTime && r.completedDate.getTime() <= anchorTime
+    (r) =>
+      r.completedDate &&
+      r.completedDate.getTime() >= fromTime &&
+      r.completedDate.getTime() <= anchorTime
   );
   const filteredByStart = allRows.filter(
-    (r) => r.startDate && r.startDate.getTime() >= fromTime && r.startDate.getTime() <= anchorTime
+    (r) =>
+      r.startDate &&
+      r.startDate.getTime() >= fromTime &&
+      r.startDate.getTime() <= anchorTime
   );
 
-  
   const totalCreated = filteredByCreated.length;
   kpiCreatedRel.textContent = totalCreated;
 
@@ -301,7 +340,6 @@ function recalcRelative() {
     `Vista relativa: ventana ${minutesWindow} minutos · anchor = ` +
     anchor.toISOString().slice(0, 19).replace('T', ' ');
 
-  
   const createdByDay = groupByDay(filteredByCreated, 'createdDate');
   const createdCtx = document.getElementById('createdChartRel').getContext('2d');
   if (createdChartRel) createdChartRel.destroy();
@@ -324,7 +362,6 @@ function recalcRelative() {
     options: baseLineOptions(),
   });
 
-  
   const finishErrorCtx = document
     .getElementById('finishErrorChartRel')
     .getContext('2d');
@@ -344,7 +381,6 @@ function recalcRelative() {
     options: baseBarOptions(),
   });
 
-  
   const statusCtx = document.getElementById('statusChartRel').getContext('2d');
   if (statusChartRel) statusChartRel.destroy();
   const statusLabels = Object.keys(statusCounts);
@@ -362,7 +398,6 @@ function recalcRelative() {
     options: baseDoughnutOptions(),
   });
 
- 
   const hoursByDay = groupHoursByDay(filteredByStart, 'startDate', 'endDate');
   const hoursCtx = document.getElementById('hoursChartRel').getContext('2d');
   if (hoursChartRel) hoursChartRel.destroy();
@@ -386,7 +421,7 @@ function recalcRelative() {
   });
 }
 
-
+// ---------------------- Vista rango ----------------------
 
 function recalcRange() {
   if (!allRows.length) return;
@@ -395,7 +430,6 @@ function recalcRange() {
   const toVal = rangeToInput.value;
 
   if (!fromVal || !toVal) {
-    
     kpiCreatedRange.textContent = '–';
     kpiFinishedRange.textContent = '–';
     kpiErrorRange.textContent = '–';
@@ -429,16 +463,24 @@ function recalcRange() {
   }
 
   const filteredByCreated = allRows.filter(
-    (r) => r.createdDate && r.createdDate.getTime() >= fromTime && r.createdDate.getTime() <= toTime
+    (r) =>
+      r.createdDate &&
+      r.createdDate.getTime() >= fromTime &&
+      r.createdDate.getTime() <= toTime
   );
   const filteredByCompleted = allRows.filter(
-    (r) => r.completedDate && r.completedDate.getTime() >= fromTime && r.completedDate.getTime() <= toTime
+    (r) =>
+      r.completedDate &&
+      r.completedDate.getTime() >= fromTime &&
+      r.completedDate.getTime() <= toTime
   );
   const filteredByStart = allRows.filter(
-    (r) => r.startDate && r.startDate.getTime() >= fromTime && r.startDate.getTime() <= toTime
+    (r) =>
+      r.startDate &&
+      r.startDate.getTime() >= fromTime &&
+      r.startDate.getTime() <= toTime
   );
 
-  
   const totalCreated = filteredByCreated.length;
   kpiCreatedRange.textContent = totalCreated;
 
@@ -491,7 +533,6 @@ function recalcRange() {
   }
   kpiHoursRange.textContent = totalHours > 0 ? totalHours.toFixed(1) + ' h' : '–';
 
-  
   const createdByDay = groupByDay(filteredByCreated, 'createdDate');
   const createdCtx = document.getElementById('createdChartRange').getContext('2d');
   if (createdChartRange) createdChartRange.destroy();
@@ -514,7 +555,6 @@ function recalcRange() {
     options: baseLineOptions(),
   });
 
-  
   const finishErrorCtx = document
     .getElementById('finishErrorChartRange')
     .getContext('2d');
@@ -534,7 +574,6 @@ function recalcRange() {
     options: baseBarOptions(),
   });
 
-  
   const statusCtx = document.getElementById('statusChartRange').getContext('2d');
   if (statusChartRange) statusChartRange.destroy();
   const statusLabels = Object.keys(statusCounts);
@@ -552,7 +591,6 @@ function recalcRange() {
     options: baseDoughnutOptions(),
   });
 
-  
   const hoursByDay = groupHoursByDay(filteredByStart, 'startDate', 'endDate');
   const hoursCtx = document.getElementById('hoursChartRange').getContext('2d');
   if (hoursChartRange) hoursChartRange.destroy();
@@ -574,9 +612,35 @@ function recalcRange() {
     },
     options: baseLineOptions(),
   });
+
+  
+  const hourlyData = buildHourlySuccessError(filteredByCreated);
+  const hourlyCtx = document.getElementById('hourlyChartRange').getContext('2d');
+  if (hourlyChartRange) hourlyChartRange.destroy();
+  hourlyChartRange = new Chart(hourlyCtx, {
+    type: 'bar',
+    data: {
+      labels: hourlyData.labels,
+      datasets: [
+        {
+          label: 'Cantidad de terminados',
+          data: hourlyData.success,
+          stack: 'stack1',
+          backgroundColor: 'rgba(34,197,94,0.85)',
+        },
+        {
+          label: 'Cantidad de fallas',
+          data: hourlyData.fails,
+          stack: 'stack1',
+          backgroundColor: 'rgba(239,68,68,0.9)',
+        },
+      ],
+    },
+    options: baseBarOptions(true),
+  });
 }
 
-
+// ---------------------- Config base de gráficos ----------------------
 
 function baseLineOptions() {
   return {
@@ -607,16 +671,18 @@ function baseLineOptions() {
   };
 }
 
-function baseBarOptions() {
+function baseBarOptions(stacked = false) {
   return {
     responsive: true,
     maintainAspectRatio: false,
     scales: {
       x: {
+        stacked,
         ticks: { color: '#9ca3af' },
         grid: { color: 'rgba(148,163,184,0.1)' },
       },
       y: {
+        stacked,
         ticks: { color: '#9ca3af' },
         grid: { color: 'rgba(148,163,184,0.12)' },
       },

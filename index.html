@@ -11,7 +11,7 @@
   <script src="libs/chart.umd.min.js"></script>
   -->
 
-  
+  <!-- usar CDN (rápido para probar) -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -49,10 +49,9 @@
   <main>
     <div class="status-row">
       <span id="statusText">Esperando CSV...</span>
-      
     </div>
 
-    
+    <!-- VISTA RELATIVA -->
     <section class="block block-relative">
       <div class="block-header-simple">
         <h2 class="block-title">Vista por ventana relativa</h2>
@@ -66,14 +65,14 @@
           <h2>Casos creados</h2>
           <div class="value" id="kpiCreatedRel">–</div>
           <div class="subtitle">
-            Cantidad de casos con 
+            Cantidad de casos con
           </div>
         </div>
         <div class="card">
           <h2>Finalizados OK</h2>
           <div class="value" id="kpiFinishedRel">–</div>
           <div class="subtitle">
-            Status exitosos (Finished / Completed / Success) 
+            Status exitosos (Finished / Completed / Success)
           </div>
         </div>
         <div class="card">
@@ -87,14 +86,14 @@
           <h2>Tiempo promedio</h2>
           <div class="value" id="kpiAvgTimeRel">–</div>
           <div class="subtitle">
-            Promedio de <code>completed - created</code> en minutos 
+            Promedio de <code>completed - created</code> en minutos
           </div>
         </div>
         <div class="card">
           <h2>Horas procesadas</h2>
           <div class="value" id="kpiHoursRel">–</div>
           <div class="subtitle">
-            Suma de <code>endtime - starttime</code> en horas 
+            Suma de <code>endtime - starttime</code> en horas
           </div>
         </div>
       </section>
@@ -138,12 +137,11 @@
       </section>
     </section>
 
-    
+    <!-- VISTA POR RANGO -->
     <section class="block block-range">
       <div class="range-header">
         <div>
           <h2 class="block-title">Vista por rango de fechas</h2>
-        
         </div>
         <div class="range-controls">
           <label>
@@ -174,21 +172,21 @@
           <h2>Casos creados</h2>
           <div class="value" id="kpiCreatedRange">–</div>
           <div class="subtitle">
-            Casos con <code>created</code> 
+            Casos con <code>created</code>
           </div>
         </div>
         <div class="card">
           <h2>Finalizados OK</h2>
           <div class="value" id="kpiFinishedRange">–</div>
           <div class="subtitle">
-            Status exitosos  
+            Status exitosos
           </div>
         </div>
         <div class="card">
           <h2>Con error</h2>
           <div class="value" id="kpiErrorRange">–</div>
           <div class="subtitle">
-            Status con error/fallo 
+            Status con error/fallo
           </div>
         </div>
         <div class="card">
@@ -202,7 +200,7 @@
           <h2>Horas procesadas</h2>
           <div class="value" id="kpiHoursRange">–</div>
           <div class="subtitle">
-            Suma de <code>endtime - starttime</code> 
+            Suma de <code>endtime - starttime</code>
           </div>
         </div>
       </section>
@@ -241,6 +239,16 @@
           </div>
           <div class="chart-container">
             <canvas id="hoursChartRange"></canvas>
+          </div>
+        </div>
+
+        <!-- NUEVO: gráfico tipo Excel, terminados vs fallas por hora -->
+        <div class="card chart-card chart-wide">
+          <div class="card-header">
+            <h2>Casos creados vs fallas por hora</h2>
+          </div>
+          <div class="chart-container">
+            <canvas id="hourlyChartRange"></canvas>
           </div>
         </div>
       </section>
