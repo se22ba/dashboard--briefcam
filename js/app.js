@@ -62,6 +62,7 @@ function buildHourlySuccessError(rows) {
   const labels = [];
   const success = new Array(BIN_COUNT).fill(0);
   const fails = new Array(BIN_COUNT).fill(0);
+  const cancelled = new Array(BIN_COUNT).fill(0);
   for (let i = 0; i < BIN_COUNT; i++) {
     const hour = Math.floor(i / 2);
     const half = i % 2;
@@ -79,9 +80,11 @@ function buildHourlySuccessError(rows) {
       success[index]++;
     } else if (st.includes("error") || st.includes("fail")) {
       fails[index]++;
+    } else if (st.includes("cancel")) {
+      cancelled[index]++;
     }
   }
-  return { labels, success, fails };
+  return { labels, success, fails, cancelled };
 }
 
 function computeAnchorDate(rows) {
@@ -264,6 +267,7 @@ function recalcRelative() {
 
   let finishedCount = 0;
   let errorCount = 0;
+  let cancelledCount = 0;
   let otherCount = 0;
 
   const statusCounts = {};
@@ -278,6 +282,8 @@ function recalcRelative() {
       finishedCount++;
     } else if (st.includes("error") || st.includes("fail")) {
       errorCount++;
+    } else if (st.includes("cancel")) {
+      cancelledCount++;
     } else {
       otherCount++;
     }
@@ -344,15 +350,16 @@ function recalcRelative() {
   finishErrorChartRel = new Chart(finishErrorCtx, {
     type: "bar",
     data: {
-      labels: ["Finalizados OK", "Con error", "Otros"],
+      labels: ["Finalizados OK", "Con error", "Cancelados", "Otros"],
       datasets: [
         {
           label: "Cantidad",
-          data: [finishedCount, errorCount, otherCount],
+          data: [finishedCount, errorCount, cancelledCount, otherCount],
           borderWidth: 1,
           backgroundColor: [
             "rgba(34,197,94,0.85)",
             "rgba(239,68,68,0.9)",
+            "rgba(255, 196, 0, 1)",
             "rgba(148,163,184,0.75)",
           ],
         },
@@ -372,6 +379,9 @@ function recalcRelative() {
     }
     if (FINISHED_STATUSES.includes(l) || l.includes("success")) {
       return "rgba(34,197,94,0.85)";
+    }
+    if (l.includes("cancel")) {
+      return "rgba(255, 196, 0, 1)";
     }
     return "rgba(148,163,184,0.75)";
   });
@@ -476,6 +486,7 @@ function recalcRange() {
 
   let finishedCount = 0;
   let errorCount = 0;
+  let cancelledCount = 0;
   let otherCount = 0;
 
   const statusCounts = {};
@@ -490,6 +501,8 @@ function recalcRange() {
       finishedCount++;
     } else if (st.includes("error") || st.includes("fail")) {
       errorCount++;
+    } else if (st.includes("cancel")) {
+      cancelledCount++;
     } else {
       otherCount++;
     }
@@ -552,15 +565,16 @@ function recalcRange() {
   finishErrorChartRange = new Chart(finishErrorCtx, {
     type: "bar",
     data: {
-      labels: ["Finalizados OK", "Con error", "Otros"],
+      labels: ["Finalizados OK", "Con error", "Cancelados", "Otros"],
       datasets: [
         {
           label: "Cantidad",
-          data: [finishedCount, errorCount, otherCount],
+          data: [finishedCount, errorCount, cancelledCount, otherCount],
           borderWidth: 1,
           backgroundColor: [
             "rgba(34,197,94,0.85)",
             "rgba(239,68,68,0.9)",
+            "rgba(255, 196, 0, 1)",
             "rgba(148,163,184,0.75)",
           ],
         },
@@ -580,6 +594,9 @@ function recalcRange() {
     }
     if (FINISHED_STATUSES.includes(l) || l.includes("success")) {
       return "rgba(34,197,94,0.85)";
+    }
+    if (l.includes("cancel")) {
+      return "rgba(255, 196, 0, 1)";
     }
     return "rgba(148,163,184,0.75)";
   });
@@ -639,6 +656,12 @@ function recalcRange() {
           data: hourlyData.fails,
           stack: "stack1",
           backgroundColor: "rgba(239,68,68,0.9)",
+        },
+        {
+          label: "Cancelados",
+          data: hourlyData.cancelled,
+          stack: "stack1",
+          backgroundColor: "rgba(255, 196, 0, 1)",
         },
       ],
     },
