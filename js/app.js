@@ -1,4 +1,5 @@
 const TZ_SHIFT_HOURS = -2;
+const CAMERA_TOP_N = 10;
 
 function parseDate(str) {
   if (!str) return null;
@@ -73,7 +74,7 @@ function buildHourlySuccessError(rows) {
     if (!d) continue;
     const h = d.getHours();
     const m = d.getMinutes();
-    let index = h * 2 + (m >= 30 ? 1 : 0);
+    const index = h * 2 + (m >= 30 ? 1 : 0);
     if (index < 0 || index >= BIN_COUNT) continue;
     const st = r.statusNorm || "";
     if (FINISHED_STATUSES.includes(st) || st.includes("success")) {
@@ -85,6 +86,31 @@ function buildHourlySuccessError(rows) {
     }
   }
   return { labels, success, fails, cancelled };
+}
+
+function buildCameraErrorStats(rows, maxItems) {
+  const map = {};
+  for (const r of rows) {
+    const st = r.statusNorm || "";
+    if (!(st.includes("error") || st.includes("fail"))) continue;
+    const rawName =
+      r.camera_name ||
+      r.camera ||
+      r.cameraid ||
+      r.camera_id ||
+      r.cam_name ||
+      "";
+    const name = String(rawName).trim();
+    if (!name) continue;
+    map[name] = (map[name] || 0) + 1;
+  }
+  const entries = Object.entries(map).sort((a, b) => b[1] - a[1]);
+  const top = typeof maxItems === "number" ? entries.slice(0, maxItems) : entries;
+  return {
+    labels: top.map((e) => e[0]),
+    values: top.map((e) => e[1]),
+    entries,
+  };
 }
 
 function computeAnchorDate(rows) {
@@ -128,6 +154,27 @@ function formatDateTimeLocal(d) {
   );
 }
 
+function downloadCameraCsv(entries, filename) {
+  if (!entries || !entries.length) {
+    alert("No hay datos de cámaras con fallas para este período.");
+    return;
+  }
+  let csv = "camera_name,fail_count\n";
+  for (const [name, count] of entries) {
+    const safeName = String(name).replace(/"/g, '""');
+    csv += `"${safeName}",${count}\n`;
+  }
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 let allRows = [];
 
 const FINISHED_STATUSES = ["finished", "completed", "done", "success"];
@@ -136,12 +183,17 @@ let createdChartRel = null;
 let finishErrorChartRel = null;
 let statusChartRel = null;
 let hoursChartRel = null;
+let cameraFailChartRel = null;
 
 let createdChartRange = null;
 let finishErrorChartRange = null;
 let statusChartRange = null;
 let hoursChartRange = null;
+let cameraFailChartRange = null;
 let hourlyChartRange = null;
+
+let lastCameraErrorsRel = [];
+let lastCameraErrorsRange = [];
 
 const statusText = document.getElementById("statusText");
 
@@ -165,6 +217,12 @@ const rangeFromInput = document.getElementById("rangeFrom");
 const rangeToInput = document.getElementById("rangeTo");
 const rangeModeSelect = document.getElementById("rangeMode");
 const applyRangeBtn = document.getElementById("applyRangeBtn");
+
+const downloadCameraCsvRelBtn = document.getElementById("downloadCameraCsvRel");
+const downloadCameraCsvRangeBtn = document.getElementById("downloadCameraCsvRange");
+
+const cameraTopRelCount = document.getElementById("cameraTopRelCount");
+const cameraTopRangeCount = document.getElementById("cameraTopRangeCount");
 
 loadBtn.addEventListener("click", () => {
   const file = fileInput.files[0];
@@ -226,6 +284,22 @@ applyRangeBtn.addEventListener("click", () => {
 rangeModeSelect.addEventListener("change", () => {
   if (!allRows.length) return;
   recalcRange();
+});
+
+downloadCameraCsvRelBtn.addEventListener("click", () => {
+  if (!allRows.length) {
+    alert("Cargá un CSV primero.");
+    return;
+  }
+  downloadCameraCsv(lastCameraErrorsRel, "camera_errors_relative.csv");
+});
+
+downloadCameraCsvRangeBtn.addEventListener("click", () => {
+  if (!allRows.length) {
+    alert("Cargá un CSV primero.");
+    return;
+  }
+  downloadCameraCsv(lastCameraErrorsRange, "camera_errors_range.csv");
 });
 
 function recalcRelative() {
@@ -359,7 +433,7 @@ function recalcRelative() {
           backgroundColor: [
             "rgba(34,197,94,0.85)",
             "rgba(239,68,68,0.9)",
-            "rgba(255, 196, 0, 1)",
+            "rgba(255,196,0,1)",
             "rgba(148,163,184,0.75)",
           ],
         },
@@ -381,7 +455,7 @@ function recalcRelative() {
       return "rgba(34,197,94,0.85)";
     }
     if (l.includes("cancel")) {
-      return "rgba(255, 196, 0, 1)";
+      return "rgba(255,196,0,1)";
     }
     return "rgba(148,163,184,0.75)";
   });
@@ -420,6 +494,31 @@ function recalcRelative() {
       ],
     },
     options: baseLineOptions(),
+  });
+
+  const cameraStatsRel = buildCameraErrorStats(filteredByCompleted, CAMERA_TOP_N);
+  lastCameraErrorsRel = cameraStatsRel.entries;
+  const topRelCount = Math.min(CAMERA_TOP_N, cameraStatsRel.entries.length);
+  if (cameraTopRelCount) {
+    cameraTopRelCount.textContent = "Top " + topRelCount;
+  }
+  const cameraCtxRel = document
+    .getElementById("cameraFailChartRel")
+    .getContext("2d");
+  if (cameraFailChartRel) cameraFailChartRel.destroy();
+  cameraFailChartRel = new Chart(cameraCtxRel, {
+    type: "bar",
+    data: {
+      labels: cameraStatsRel.labels,
+      datasets: [
+        {
+          label: "Fallas por cámara",
+          data: cameraStatsRel.values,
+          backgroundColor: "rgba(239,68,68,0.9)",
+        },
+      ],
+    },
+    options: baseBarOptions(false, true),
   });
 }
 
@@ -574,7 +673,7 @@ function recalcRange() {
           backgroundColor: [
             "rgba(34,197,94,0.85)",
             "rgba(239,68,68,0.9)",
-            "rgba(255, 196, 0, 1)",
+            "rgba(255,196,0,1)",
             "rgba(148,163,184,0.75)",
           ],
         },
@@ -596,7 +695,7 @@ function recalcRange() {
       return "rgba(34,197,94,0.85)";
     }
     if (l.includes("cancel")) {
-      return "rgba(255, 196, 0, 1)";
+      return "rgba(255,196,0,1)";
     }
     return "rgba(148,163,184,0.75)";
   });
@@ -637,6 +736,31 @@ function recalcRange() {
     options: baseLineOptions(),
   });
 
+  const cameraStatsRange = buildCameraErrorStats(filteredByCompleted, CAMERA_TOP_N);
+  lastCameraErrorsRange = cameraStatsRange.entries;
+  const topRangeCount = Math.min(CAMERA_TOP_N, cameraStatsRange.entries.length);
+  if (cameraTopRangeCount) {
+    cameraTopRangeCount.textContent = "Top " + topRangeCount;
+  }
+  const cameraCtxRange = document
+    .getElementById("cameraFailChartRange")
+    .getContext("2d");
+  if (cameraFailChartRange) cameraFailChartRange.destroy();
+  cameraFailChartRange = new Chart(cameraCtxRange, {
+    type: "bar",
+    data: {
+      labels: cameraStatsRange.labels,
+      datasets: [
+        {
+          label: "Fallas por cámara",
+          data: cameraStatsRange.values,
+          backgroundColor: "rgba(239,68,68,0.9)",
+        },
+      ],
+    },
+    options: baseBarOptions(false, true),
+  });
+
   const hourlyData = buildHourlySuccessError(filteredByCreated);
   const hourlyCtx = document.getElementById("hourlyChartRange").getContext("2d");
   if (hourlyChartRange) hourlyChartRange.destroy();
@@ -661,7 +785,7 @@ function recalcRange() {
           label: "Cancelados",
           data: hourlyData.cancelled,
           stack: "stack1",
-          backgroundColor: "rgba(255, 196, 0, 1)",
+          backgroundColor: "rgba(255,196,0,1)",
         },
       ],
     },
@@ -698,8 +822,9 @@ function baseLineOptions() {
   };
 }
 
-function baseBarOptions(stacked = false) {
+function baseBarOptions(stacked = false, horizontal = false) {
   return {
+    indexAxis: horizontal ? "y" : "x",
     responsive: true,
     maintainAspectRatio: false,
     scales: {

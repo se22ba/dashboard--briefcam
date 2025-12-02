@@ -118,6 +118,12 @@ header h1 {
   cursor: not-allowed;
 }
 
+.btn-sm {
+  padding: 4px 8px;
+  font-size: 0.7rem;
+  box-shadow: none;
+}
+
 .btn-secondary {
   background: transparent;
   border: 1px solid var(--accent);
